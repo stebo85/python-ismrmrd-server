@@ -12,6 +12,9 @@ import re
 import mrdhelper
 import constants
 from time import perf_counter
+import nibabel as nib
+import subprocess
+
 
 # Folder for debug output files
 debugFolder = "/tmp/share/debug"
@@ -273,6 +276,18 @@ def process_image(images, connection, config, metadata):
     logging.debug("Original image data is size %s" % (data.shape,))
     np.save(debugFolder + "/" + "imgOrig.npy", data)
 
+    # convert data to nifti using nibabel
+    
+    xform = np.eye(4)
+    new_img = nib.nifti1.Nifti1Image(data, xform)
+    nib.save(new_img, 'nifti_image.nii')
+
+    subprocess.run(["niimath", "nifti_image.nii -add 143 nifti_image.nii"])
+
+    print('Hallo Welt')
+    img = nib.load('nifti_image.nii')
+    data = img.get_fdata()
+
     if ('parameters' in config) and ('options' in config['parameters']) and (config['parameters']['options'] == 'complex'):
         # Complex images are requested
         data = data.astype(np.complex64)
@@ -375,6 +390,7 @@ def create_example_roi(img_size):
     thickness  = 1 # Line thickness
     style      = 0 # Line style (0 = solid, 1 = dashed)
     visibility = 1 # Line visibility (0 = false, 1 = true)
+
 
     roi = mrdhelper.create_roi(x, y, rgb, thickness, style, visibility)
     return roi

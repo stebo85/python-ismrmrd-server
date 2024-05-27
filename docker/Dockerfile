@@ -52,8 +52,13 @@ COPY --from=mrd_converter /usr/local/bin/siemens_to_ismrmrd  /usr/local/bin/siem
 RUN apt-get update && apt-get install --no-install-recommends -y libxslt1.1 libhdf5-103 libboost-program-options1.74.0 libpugixml1v5 git dos2unix
 RUN mkdir -p /opt/code
 
-# Python MRD library
-RUN pip3 install h5py==3.10.0 ismrmrd==1.14.0
+# Install niimath
+RUN  apt-get update && apt-get install -y curl unzip
+RUN curl -fLO https://github.com/rordenlab/niimath/releases/latest/download/niimath_lnx.zip
+RUN unzip niimath_lnx.zip -d /usr/local/bin
+
+# Python MRD library and nibabel
+RUN pip3 install h5py==3.10.0 ismrmrd==1.14.0 nibabel
 
 RUN cd /opt/code && \
     git clone https://github.com/ismrmrd/ismrmrd-python-tools.git && \
