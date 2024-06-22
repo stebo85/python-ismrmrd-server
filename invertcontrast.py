@@ -235,7 +235,7 @@ def process_raw(group, connection, config, metadata):
         tmpMeta['Keep_image_geometry']    = 1
 
         xml = tmpMeta.serialize()
-        logging.debug("Image MetaAttributes: %s", xml)
+        # logging.debug("Image MetaAttributes: %s", xml)
         tmpImg.attribute_string = xml
         imagesOut.append(tmpImg)
 
@@ -264,16 +264,20 @@ def process_image(images, connection, config, metadata):
     meta = [ismrmrd.Meta.deserialize(img.attribute_string) for img in images]
 
     # Reformat data to [y x z cha img], i.e. [row col] for the first two dimensions
-    data = data.transpose((3, 4, 2, 1, 0))
+    # data = data.transpose((3, 4, 2, 1, 0))
+
+    # Reformat data to [y x img cha z], i.e. [row ~col] for the first two dimensions
+    data = data.transpose((3, 4, 0, 1, 2))
 
     # Display MetaAttributes for first image
-    logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
+    # logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
 
     # Optional serialization of ICE MiniHeader
-    if 'IceMiniHead' in meta[0]:
-        logging.debug("IceMiniHead[0]: %s", base64.b64decode(meta[0]['IceMiniHead']).decode('utf-8'))
+    # if 'IceMiniHead' in meta[0]:
+    #     logging.debug("IceMiniHead[0]: %s", base64.b64decode(meta[0]['IceMiniHead']).decode('utf-8'))
 
-    logging.debug("Original image data is size %s" % (data.shape,))
+    logging.debug("Stebo: Original image data is size %s" % (data.shape,))
+    # e.g. gre with 128x128x10 with phase and magnitude results in [128 128 1 1 1]
     np.save(debugFolder + "/" + "imgOrig.npy", data)
 
     # convert data to nifti using nibabel
@@ -282,11 +286,18 @@ def process_image(images, connection, config, metadata):
     new_img = nib.nifti1.Nifti1Image(data, xform)
     nib.save(new_img, 'nifti_image.nii')
 
-    subprocess.run(["niimath", "nifti_image.nii -add 143 nifti_image.nii"])
+    # subprocess.run(["niimath", "nifti_image.nii -add 143 nifti_image.nii"])
+    subprocess.run(["bet2", "nifti_image.nii", "brain.nii"])
 
-    print('Hallo Welt')
-    img = nib.load('nifti_image.nii')
+    print('Hallo Welt from bet4')
+    img = nib.load('brain.nii')
     data = img.get_fdata()
+
+    # Reformat data
+    print("shape after loading with nibabel")
+    print(data.shape)
+    data = data[:, :, :, None, None]
+    data = data.transpose((0, 1, 4, 3, 2))
 
     if ('parameters' in config) and ('options' in config['parameters']) and (config['parameters']['options'] == 'complex'):
         # Complex images are requested
@@ -295,8 +306,8 @@ def process_image(images, connection, config, metadata):
     else:
         # Determine max value (12 or 16 bit)
         BitsStored = 12
-        if (mrdhelper.get_userParameterLong_value(metadata, "BitsStored") is not None):
-            BitsStored = mrdhelper.get_userParameterLong_value(metadata, "BitsStored")
+        # if (mrdhelper.get_userParameterLong_value(metadata, "BitsStored") is not None):
+        #     BitsStored = mrdhelper.get_userParameterLong_value(metadata, "BitsStored")
         maxVal = 2**BitsStored - 1
 
         # Normalize and convert to int16
@@ -306,9 +317,9 @@ def process_image(images, connection, config, metadata):
         data = data.astype(np.int16)
 
     # Invert image contrast
-    data = maxVal-data
-    data = np.abs(data)
-    np.save(debugFolder + "/" + "imgInverted.npy", data)
+    # data = maxVal-data
+    # data = np.abs(data)
+    # np.save(debugFolder + "/" + "imgInverted.npy", data)
 
     currentSeries = 0
 
@@ -319,6 +330,7 @@ def process_image(images, connection, config, metadata):
         # Transpose from convenience shape of [y x z cha] to MRD Image shape of [cha z y x]
         # from_array() should be called with 'transpose=False' to avoid warnings, and when called
         # with this option, can take input as: [cha z y x], [z y x], or [y x]
+        # imagesOut[iImg] = ismrmrd.Image.from_array(data[...,iImg].transpose((3, 2, 0, 1)), transpose=False)
         imagesOut[iImg] = ismrmrd.Image.from_array(data[...,iImg].transpose((3, 2, 0, 1)), transpose=False)
 
         # Create a copy of the original fixed header and update the data_type
@@ -367,7 +379,7 @@ def process_image(images, connection, config, metadata):
             tmpMeta['ImageColumnDir'] = ["{:.18f}".format(oldHeader.phase_dir[0]), "{:.18f}".format(oldHeader.phase_dir[1]), "{:.18f}".format(oldHeader.phase_dir[2])]
 
         metaXml = tmpMeta.serialize()
-        logging.debug("Image MetaAttributes: %s", xml.dom.minidom.parseString(metaXml).toprettyxml())
+        # logging.debug("Image MetaAttributes: %s", xml.dom.minidom.parseString(metaXml).toprettyxml())
         logging.debug("Image data has %d elements", imagesOut[iImg].data.size)
 
         imagesOut[iImg].attribute_string = metaXml

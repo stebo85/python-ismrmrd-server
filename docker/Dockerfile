@@ -53,9 +53,22 @@ RUN apt-get update && apt-get install --no-install-recommends -y libxslt1.1 libh
 RUN mkdir -p /opt/code
 
 # Install niimath
-RUN  apt-get update && apt-get install -y curl unzip
+RUN  apt-get update && apt-get install -y curl unzip 
+# build-essential cmake ca-certificates
 RUN curl -fLO https://github.com/rordenlab/niimath/releases/latest/download/niimath_lnx.zip
 RUN unzip niimath_lnx.zip -d /usr/local/bin
+
+# Install bet
+WORKDIR /opt/bet
+# RUN git clone https://github.com/liangfu/bet2.git 
+# WORKDIR /opt/bet2/build
+# RUN cmake ..
+# RUN make -j6
+RUN curl -o bet -k https://www.mrt.uni-jena.de/dln/bet
+RUN curl -o bet2 -k https://www.mrt.uni-jena.de/dln/bet2
+RUN chmod a+rwx bet bet2
+ENV PATH=$PATH:/opt/bet
+ENV FSLOUTPUTTYPE=NIFTI
 
 # Python MRD library and nibabel
 RUN pip3 install h5py==3.10.0 ismrmrd==1.14.0 nibabel
