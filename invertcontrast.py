@@ -283,20 +283,31 @@ def process_image(images, connection, config, metadata):
     # convert data to nifti using nibabel
     
     xform = np.eye(4)
-    new_img = nib.nifti1.Nifti1Image(data, xform)
-    nib.save(new_img, 'nifti_image.nii')
+    tr1_img = nib.nifti1.Nifti1Image(data[:,:,:48,:,:], xform)
+    tr2_img = nib.nifti1.Nifti1Image(data[:,:,48:,:,:], xform)
+    nib.save(tr1_img, 'nifti_tr1_image.nii')
+    nib.save(tr2_img, 'nifti_tr2_image.nii')
 
     # subprocess.run(["niimath", "nifti_image.nii -add 143 nifti_image.nii"])
-    subprocess.run(["bet2", "nifti_image.nii", "brain.nii"])
+    # subprocess.run(["bet2", "nifti_image.nii", "brain.nii"])
 
-    print('Hallo Welt from bet4')
-    img = nib.load('brain.nii')
+    print('Hallo Welt from afib1')
+
+    # Processing of AFI data
+    # We want acosd((r*n-1)./(n-r)) where r=image2/image1 and n=10
+    # Then normalise it with B1map_norm = real(FAmap)*100/alphanom;
+    # Consider adding erode/dilate, a filter (smooth 8 mm) and masking
+
+
+
+    #img = nib.load('brain.nii')
+    img = nib.load('nifti_tr1_image.nii')
     data = img.get_fdata()
 
     # Reformat data
     print("shape after loading with nibabel")
     print(data.shape)
-    data = data[:, :, :, None, None]
+    #data = data[:, :, :, None, None]
     data = data.transpose((0, 1, 4, 3, 2))
 
     if ('parameters' in config) and ('options' in config['parameters']) and (config['parameters']['options'] == 'complex'):
