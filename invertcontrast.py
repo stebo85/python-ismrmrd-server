@@ -312,12 +312,15 @@ def process_image(images, connection, config, metadata):
     #signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros_like(data_tr2), where=~np.isclose(data_tr1,np.zeros_like(data_tr1)))
     #signal_ratio = np.divide(data_tr2, data_tr1)
     signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros(data_tr2.shape, dtype=float), where=data_tr1!=0)
-    actual_fa = np.arccos((tr_ratio*signal_ratio-1)/(tr_ratio-signal_ratio))
+    actual_fa = np.arccos((tr_ratio*signal_ratio-1)/(tr_ratio-signal_ratio), out=np.zeros(signal_ratio.shape, dtype=float), where=tr_ratio!=signal_ratio)
+    # Divide by nominal flip angle in radians and multiply by 100 for p.u.
+    nominal_fa = np.radians(55)
+    data = actual_fa/nominal_fa*100
 
     #img = nib.load('brain.nii')
     #img = nib.load('nifti_tr1_image.nii')
     #data = img.get_fdata()
-    data = actual_fa
+    #data = actual_fa
 
     # Reformat data
     print("shape after loading with nibabel")
