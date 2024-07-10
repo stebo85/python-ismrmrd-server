@@ -270,13 +270,18 @@ def process_image(images, connection, config, metadata):
     data = data.transpose((3, 4, 0, 1, 2))
 
     # Display MetaAttributes for first image
-    print('Try logging meta')
+    print('Try logging meta 0')
     logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
+    print('Try logging meta 1')
+    logging.debug("MetaAttributes[1]: %s", ismrmrd.Meta.serialize(meta[1]))
 
     # Optional serialization of ICE MiniHeader
-    print('Try logging minihead')
+    print('Try logging minihead 0')
     if 'IceMiniHead' in meta[0]:
          logging.debug("IceMiniHead[0]: %s", base64.b64decode(meta[0]['IceMiniHead']).decode('utf-8'))
+    print('Try logging minihead 1')
+    if 'IceMiniHead' in meta[1]:
+         logging.debug("IceMiniHead[1]: %s", base64.b64decode(meta[1]['IceMiniHead']).decode('utf-8'))
 
     logging.debug("Stebo: Original image data is size %s" % (data.shape,))
     # e.g. gre with 128x128x10 with phase and magnitude results in [128 128 1 1 1]
@@ -306,7 +311,7 @@ def process_image(images, connection, config, metadata):
     data_tr1,data_tr2 = np.split(data,2,axis=2)
     #signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros_like(data_tr2), where=~np.isclose(data_tr1,np.zeros_like(data_tr1)))
     #signal_ratio = np.divide(data_tr2, data_tr1)
-    signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros(data_tr2.shape, dtype=float), where=data_tr2!=0)
+    signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros(data_tr2.shape, dtype=float), where=data_tr1!=0)
     actual_fa = np.arccos((tr_ratio*signal_ratio-1)/(tr_ratio-signal_ratio))
 
     #img = nib.load('brain.nii')
