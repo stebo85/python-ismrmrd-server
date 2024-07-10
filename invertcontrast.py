@@ -304,7 +304,9 @@ def process_image(images, connection, config, metadata):
     # Finding this from metadata would be better..
     tr_ratio = 10
     data_tr1,data_tr2 = np.split(data,2,axis=2)
-    signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros_like(data_tr2), where=~np.isclose(data_tr1,np.zeros_like(data_tr1)))
+    #signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros_like(data_tr2), where=~np.isclose(data_tr1,np.zeros_like(data_tr1)))
+    #signal_ratio = np.divide(data_tr2, data_tr1)
+    signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeros(data_tr2.shape, dtype=float), where=data_tr2!=0)
     actual_fa = np.arccos((tr_ratio*signal_ratio-1)/(tr_ratio-signal_ratio))
 
     #img = nib.load('brain.nii')
