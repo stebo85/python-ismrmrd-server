@@ -270,18 +270,21 @@ def process_image(images, connection, config, metadata):
     data = data.transpose((3, 4, 0, 1, 2))
 
     # Display MetaAttributes for first image
-    # logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
+    print('Try logging meta')
+    logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
 
     # Optional serialization of ICE MiniHeader
-    # if 'IceMiniHead' in meta[0]:
-    #     logging.debug("IceMiniHead[0]: %s", base64.b64decode(meta[0]['IceMiniHead']).decode('utf-8'))
+    print('Try logging minihead')
+    if 'IceMiniHead' in meta[0]:
+         logging.debug("IceMiniHead[0]: %s", base64.b64decode(meta[0]['IceMiniHead']).decode('utf-8'))
 
     logging.debug("Stebo: Original image data is size %s" % (data.shape,))
     # e.g. gre with 128x128x10 with phase and magnitude results in [128 128 1 1 1]
     np.save(debugFolder + "/" + "imgOrig.npy", data)
 
     # convert data to nifti using nibabel
-    
+    print('Do the afi stuff.')
+
     xform = np.eye(4)
     tr1_img = nib.nifti1.Nifti1Image(data[:,:,:48,:,:], xform)
     tr2_img = nib.nifti1.Nifti1Image(data[:,:,48:,:,:], xform)
@@ -297,12 +300,17 @@ def process_image(images, connection, config, metadata):
     # We want acosd((r*n-1)./(n-r)) where r=image2/image1 and n=10
     # Then normalise it with B1map_norm = real(FAmap)*100/alphanom;
     # Consider adding erode/dilate, a filter (smooth 8 mm) and masking
-
-
+    
+    # Finding this from metadata would be better..
+    tr_ratio = 10
+    data_tr1,data_tr2 = np.split(data,2,axis=2)
+    signal_ratio = np.divide(data_tr2, data_tr1, out=np.zeroes_like(data_tr2), where=~np.isclose(data_tr1,np.zeroes_like(data_tr1)))
+    actual_fa = np.arccos((tr_ratio*signal_ratio-1)/(tr_ratio-signal_ratio))
 
     #img = nib.load('brain.nii')
-    img = nib.load('nifti_tr1_image.nii')
-    data = img.get_fdata()
+    #img = nib.load('nifti_tr1_image.nii')
+    #data = img.get_fdata()
+    data = actual_fa
 
     # Reformat data
     print("shape after loading with nibabel")
