@@ -340,9 +340,10 @@ def process_image(images, connection, config, metadata):
         maxVal = 2**BitsStored - 1
 
         # Normalize and convert to int16
-        data = data.astype(np.float64)
-        data *= maxVal/data.max()
-        data = np.around(data)
+        # Just convert to int16
+#        data = data.astype(np.float64)
+#        data *= maxVal/data.max()
+#        data = np.around(data)
         data = data.astype(np.int16)
 
     # Invert image contrast
