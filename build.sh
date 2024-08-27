@@ -1,7 +1,7 @@
 #convert data
-# python dicom2mrd.py -o brain.h5 data/dicom_interop/[complete with path to dicoms]
+python dicom2mrd.py data/014-TOF_FCY_500um/ -o tof.h5
 
-containerName=bet4
+containerName=vesselboost1
 
 docker build -t stebo85/$containerName -f docker/Dockerfile ./
 
