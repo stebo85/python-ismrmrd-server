@@ -286,17 +286,15 @@ def process_image(images, connection, config, metadata):
     new_img = nib.nifti1.Nifti1Image(data, xform)
     nib.save(new_img, 'nifti_image.nii')
 
-    # subprocess.run(["niimath", "nifti_image.nii -add 143 nifti_image.nii"])
-    subprocess.run(["bet2", "nifti_image.nii", "brain.nii"])
 
-    print('Hallo Welt from bet4')
-    img = nib.load('brain.nii')
+    print('Hallo Welt from vesselboost')
+    img = nib.load('nifti_image.nii')
     data = img.get_fdata()
 
     # Reformat data
     print("shape after loading with nibabel")
     print(data.shape)
-    data = data[:, :, :, None, None]
+    # data = data[:, :, :, None, None]
     data = data.transpose((0, 1, 4, 3, 2))
 
     if ('parameters' in config) and ('options' in config['parameters']) and (config['parameters']['options'] == 'complex'):

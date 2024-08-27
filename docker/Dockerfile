@@ -1,6 +1,6 @@
 # ----- 1. First stage to build ismrmrd and siemens_to_ismrmrd -----
-# FROM python:3.12.0-slim AS mrd_converter
-FROM vnmd/vesselboost_1.0.0 AS mrd_converter
+FROM python:3.12.0-slim AS mrd_converter
+# FROM vnmd/vesselboost_1.0.0 AS mrd_converter
 ARG  DEBIAN_FRONTEND=noninteractive
 ENV  TZ=America/Chicago
 
@@ -33,8 +33,8 @@ RUN cd /opt/code && \
 RUN cd /usr/local/lib && tar -czvf libismrmrd.tar.gz libismrmrd*
 
 # ----- 2. Create a devcontainer without all of the build dependencies of MRD -----
-# FROM python:3.12.0-slim AS python-mrd-devcontainer
-FROM vnmd/vesselboost_1.0.0 AS python-mrd-devcontainer
+FROM python:3.12.0-slim AS python-mrd-devcontainer
+# FROM vnmd/vesselboost_1.0.0 AS python-mrd-devcontainer
 
 LABEL org.opencontainers.image.description="Python MRD Image Reconstruction and Analysis Server"
 LABEL org.opencontainers.image.url="https://github.com/kspaceKelvin/python-ismrmrd-server"

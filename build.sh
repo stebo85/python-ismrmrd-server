@@ -12,7 +12,7 @@ python3 /opt/code/python-ismrmrd-server/main.py -v -r -H=0.0.0.0 -p=9002 -s -S=/
 
 
 # python client.py -G dataset -o phantom_img.h5 phantom_raw.h5
-python client.py -G dataset -o /data/brain_oprenrecon.h5 /data/brain.h5
+python client.py -G dataset -o /data/tof_oprenrecon.h5 /data/tof.h5
 
 
 
