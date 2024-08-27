@@ -268,6 +268,7 @@ def process_image(images, connection, config, metadata):
 
     # Reformat data to [y x img cha z], i.e. [row ~col] for the first two dimensions
     data = data.transpose((3, 4, 0, 1, 2))
+    data = data[:,:,:]
 
     # Display MetaAttributes for first image
     # logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
