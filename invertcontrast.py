@@ -268,7 +268,6 @@ def process_image(images, connection, config, metadata):
 
     # Reformat data to [y x img cha z], i.e. [row ~col] for the first two dimensions
     data = data.transpose((3, 4, 0, 1, 2))
-    data = data[:,:,:]
 
     # Display MetaAttributes for first image
     # logging.debug("MetaAttributes[0]: %s", ismrmrd.Meta.serialize(meta[0]))
@@ -287,10 +286,15 @@ def process_image(images, connection, config, metadata):
     subprocess.run(["mkdir", "tof_output"])
 
     xform = np.eye(4)
+
+    # vesselboost needs 3D data:
+    data = data[:,:,:]
     new_img = nib.nifti1.Nifti1Image(data, xform)
     nib.save(new_img, 'tof.nii')
 
-    # subprocess.run(["mv", "tof.nii", "tof_input"])
+    subprocess.run(["mv", "tof.nii", "tof_input"])
+
+    subprocess.run(["prediction.py", "--ds_path", "tof_input", "--out_path", "tof_output", "--pretrained", "/opt/VesselBoost/saved_models/manual_0429", "--prep_mode", "4"])
 
 
     # subprocess.run(["singularity", "exec", "/opt/code/python-ismrmrd-server/vesselboost_1.0.0_20240815.simg"], "prediction.py", "--ds_path", "tof_input", "--out_path", "tof_output", "--pretrained", "/opt/VesselBoost/saved_models/manual_0429", "--prep_mode", "4")
@@ -299,14 +303,14 @@ def process_image(images, connection, config, metadata):
     # prediction.py --ds_path tof_input --out_path tof_output --pretrained /opt/VesselBoost/saved_models/manual_0429 --prep_mode 4
 
     print('Hallo Welt from vesselboost')
-    # img = nib.load('tof_output/tof.nii')
-    img = nib.load('tof.nii')
+    img = nib.load('tof_output/tof.nii')
+    # img = nib.load('tof.nii')
     data = img.get_fdata()
 
     # Reformat data
     print("shape after loading with nibabel")
     print(data.shape)
-    # data = data[:, :, :, None, None]
+    data = data[:, :, :, None, None]
     data = data.transpose((0, 1, 4, 3, 2))
 
     if ('parameters' in config) and ('options' in config['parameters']) and (config['parameters']['options'] == 'complex'):

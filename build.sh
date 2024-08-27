@@ -11,7 +11,8 @@ docker build -t $containerName -f docker/Dockerfile ./
 
 
 # docker run -it $containerName bash
-docker run --rm -it --add-host=host.docker.internal:host-gateway -v /tmp:/tmp -v .:/data $containerName /bin/bash
+# docker run --rm -it --add-host=host.docker.internal:host-gateway -v /tmp:/tmp -v .:/data $containerName /bin/bash
+docker run --rm -it --add-host=host.docker.internal:host-gateway -v /tmp:/tmp -v .:/data vnmd/vesselboost_1.0.0 /bin/bash
 # docker run --rm -it --cap-add SYS_ADMIN --security-opt apparmor:unconfined --device=/dev/fuse --add-host=host.docker.internal:host-gateway -v /tmp:/tmp -v /home/ubuntu/github/python-ismrmrd-server:/data $containerName /bin/bash
 python3 /opt/code/python-ismrmrd-server/main.py -v -r -H=0.0.0.0 -p=9002 -s -S=/tmp/share/saved_data &
 
