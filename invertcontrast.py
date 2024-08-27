@@ -282,13 +282,23 @@ def process_image(images, connection, config, metadata):
 
     # convert data to nifti using nibabel
     
+    subprocess.run(["mkdir", "tof_input"])
+    subprocess.run(["mkdir", "tof_output"])
+
     xform = np.eye(4)
     new_img = nib.nifti1.Nifti1Image(data, xform)
-    nib.save(new_img, 'nifti_image.nii')
+    nib.save(new_img, 'tof.nii')
 
+    subprocess.run(["mv", "tof.nii", "tof_input"])
+
+
+    subprocess.run(["singularity", "exec", "/opt/code/python-ismrmrd-server/vesselboost_1.0.0_20240815.simg"], "prediction.py", "--ds_path", "tof_input", "--out_path", "tof_output", "--pretrained", "/opt/VesselBoost/saved_models/manual_0429", "--prep_mode", "4")
+    # path_to_model=/cvmfs/neurodesk.ardc.edu.au/containers/vesselboost_1.0.0_20240815/vesselboost_1.0.0_20240815.simg/opt/VesselBoost/saved_models/
+    # prediction.py --ds_path /path/ --out_path /path/ --pretrained "$path_to_model"/manual_0429 --prep_mode 4
+    # prediction.py --ds_path tof_input --out_path tof_output --pretrained /opt/VesselBoost/saved_models/manual_0429 --prep_mode 4
 
     print('Hallo Welt from vesselboost')
-    img = nib.load('nifti_image.nii')
+    img = nib.load('tof_output/tof.nii')
     data = img.get_fdata()
 
     # Reformat data
