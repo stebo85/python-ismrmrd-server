@@ -74,12 +74,12 @@ RUN apt-get clean && \
 
 
 # Install apptainer and download vesselboast container
-WORKDIR /opt/code/python-ismrmrd-server
+# WORKDIR /opt/code/python-ismrmrd-server
 
-RUN apt update
-RUN apt install -y wget curl
-RUN wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
-RUN apt install -y ./apptainer_1.3.3_amd64.deb
+# RUN apt update
+# RUN apt install -y wget curl
+# RUN wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
+# RUN apt install -y ./apptainer_1.3.3_amd64.deb
 
 # Install singularity
 
@@ -133,9 +133,10 @@ RUN apt install -y ./apptainer_1.3.3_amd64.deb
 #     && apt-get clean && rm -rf /var/lib/apt/lists/* 
 
 
-RUN curl -X GET https://neurocontainers.neurodesk.org/vesselboost_1.0.0_20240815.simg -O
+# RUN curl -X GET https://neurocontainers.neurodesk.org/vesselboost_1.0.0_20240815.simg -O
 
-
+# RUN wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer-suid_1.3.3_amd64.deb
+# RUN dpkg -i ./apptainer-suid_1.3.3_amd64.deb
 
 # ----- 3. Copy deployed code into the devcontainer for deployment -----
 FROM python-mrd-devcontainer AS python-mrd-runtime
