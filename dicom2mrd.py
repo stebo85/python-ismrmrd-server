@@ -63,14 +63,15 @@ def CreateMrdHeader(dset):
     encSpace.matrixSize.y                                       = dset.Rows
     encSpace.matrixSize.z                                       = 1
     encSpace.fieldOfView_mm                                     = ismrmrd.xsd.fieldOfViewMm()
-    if dset.SOPClassUID.name == 'Enhanced MR Image Storage':
-        encSpace.fieldOfView_mm.x                               =       dset.PerFrameFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing[0]*dset.Rows
-        encSpace.fieldOfView_mm.y                               =       dset.PerFrameFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing[1]*dset.Columns
-        encSpace.fieldOfView_mm.z                               = float(dset.PerFrameFunctionalGroupsSequence[0].PixelMeasuresSequence[0].SliceThickness)
-    else:
-        encSpace.fieldOfView_mm.x                               =       dset.PixelSpacing[0]*dset.Rows
-        encSpace.fieldOfView_mm.y                               =       dset.PixelSpacing[1]*dset.Columns
-        encSpace.fieldOfView_mm.z                               = float(dset.SliceThickness)
+    
+    # Use helper functions to get pixel spacing and slice thickness
+    pixel_spacing = get_pixel_spacing(dset)
+    slice_thickness = get_slice_thickness(dset)
+    
+    encSpace.fieldOfView_mm.x = pixel_spacing[0] * dset.Rows
+    encSpace.fieldOfView_mm.y = pixel_spacing[1] * dset.Columns
+    encSpace.fieldOfView_mm.z = slice_thickness
+    
     enc.encodedSpace                                            = encSpace
     enc.reconSpace                                              = encSpace
     enc.encodingLimits                                          = ismrmrd.xsd.encodingLimitsType()
@@ -98,6 +99,74 @@ def GetDicomFiles(directory):
         elif entry.is_dir():
             yield from GetDicomFiles(entry.path)
 
+def get_slice_location(dset):
+    """Extract slice location from various DICOM formats"""
+    # Check for standard SliceLocation
+    if hasattr(dset, 'SliceLocation'):
+        return dset.SliceLocation
+    
+    # Check for enhanced DICOM with PerFrameFunctionalGroupsSequence
+    if hasattr(dset, 'SOPClassUID') and dset.SOPClassUID.name == 'Enhanced MR Image Storage':
+        try:
+            # Extract from PlanePositionSequence
+            if hasattr(dset.PerFrameFunctionalGroupsSequence[0], 'PlanePositionSequence'):
+                pos = dset.PerFrameFunctionalGroupsSequence[0].PlanePositionSequence[0].ImagePositionPatient
+                return float(pos[2])  # Z-coordinate
+        except:
+            pass
+    
+    # Last resort: use ImagePositionPatient
+    if hasattr(dset, 'ImagePositionPatient'):
+        return float(dset.ImagePositionPatient[2])
+    
+    # If all else fails, return None
+    return None
+
+def get_pixel_spacing(dset):
+    """Extract pixel spacing from various DICOM formats"""
+    # Check for standard PixelSpacing
+    if hasattr(dset, 'PixelSpacing'):
+        return dset.PixelSpacing
+    
+    # Check for enhanced DICOM with PerFrameFunctionalGroupsSequence
+    if hasattr(dset, 'SOPClassUID') and dset.SOPClassUID.name == 'Enhanced MR Image Storage':
+        try:
+            # Extract from PixelMeasuresSequence
+            if hasattr(dset.PerFrameFunctionalGroupsSequence[0], 'PixelMeasuresSequence'):
+                return dset.PerFrameFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing
+            # Check SharedFunctionalGroupsSequence as an alternative
+            elif hasattr(dset, 'SharedFunctionalGroupsSequence'):
+                if hasattr(dset.SharedFunctionalGroupsSequence[0], 'PixelMeasuresSequence'):
+                    return dset.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing
+        except:
+            pass
+    
+    # If all else fails, return default values
+    print(f"Warning: No pixel spacing found for file {dset.filename if hasattr(dset, 'filename') else 'unknown'}")
+    return [1.0, 1.0]  # Default 1mm spacing
+
+def get_slice_thickness(dset):
+    """Extract slice thickness from various DICOM formats"""
+    # Check for standard SliceThickness
+    if hasattr(dset, 'SliceThickness'):
+        return float(dset.SliceThickness)
+    
+    # Check for enhanced DICOM with PerFrameFunctionalGroupsSequence
+    if hasattr(dset, 'SOPClassUID') and dset.SOPClassUID.name == 'Enhanced MR Image Storage':
+        try:
+            # Extract from PixelMeasuresSequence
+            if hasattr(dset.PerFrameFunctionalGroupsSequence[0], 'PixelMeasuresSequence'):
+                return float(dset.PerFrameFunctionalGroupsSequence[0].PixelMeasuresSequence[0].SliceThickness)
+            # Check SharedFunctionalGroupsSequence as an alternative
+            elif hasattr(dset, 'SharedFunctionalGroupsSequence'):
+                if hasattr(dset.SharedFunctionalGroupsSequence[0], 'PixelMeasuresSequence'):
+                    return float(dset.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].SliceThickness)
+        except:
+            pass
+    
+    # If all else fails, return default value
+    print(f"Warning: No slice thickness found for file {dset.filename if hasattr(dset, 'filename') else 'unknown'}")
+    return 1.0  # Default 1mm thickness
 
 def main(args):
     dsetsAll = []
@@ -133,14 +202,21 @@ def main(args):
 
         # Build a list of unique SliceLocation and TriggerTimes, as the MRD
         # slice and phase counters index into these
-        uSliceLoc = np.unique([dset.SliceLocation for dset in dsets])
-        if dsets[0].SliceLocation != uSliceLoc[0]:
+        slice_locations = [get_slice_location(dset) for dset in dsets]
+        
+        # If any slice locations are None, create artificial locations
+        if None in slice_locations:
+            print("Warning: Some images missing slice location - using sequential numbering")
+            slice_locations = list(range(len(dsets)))
+        
+        uSliceLoc = np.unique(slice_locations)
+        if slice_locations[0] != uSliceLoc[0]:
             uSliceLoc = uSliceLoc[::-1]
 
         try:
             # This field may not exist for non-gated sequences
-            uTrigTime = np.unique([dset.TriggerTime for dset in dsets])
-            if dsets[0].TriggerTime != uTrigTime[0]:
+            uTrigTime = np.unique([getattr(dset, 'TriggerTime', 0) for dset in dsets])
+            if hasattr(dsets[0], 'TriggerTime') and dsets[0].TriggerTime != uTrigTime[0]:
                 uTrigTime = uTrigTime[::-1]
         except:
             uTrigTime = np.zeros_like(uSliceLoc)
@@ -158,12 +234,29 @@ def main(args):
             tmpMeta   = ismrmrd.Meta()
 
             try:
-                tmpMrdImg.image_type                = imtype_map[tmpDset.ImageType[2]]
+                tmpMrdImg.image_type = imtype_map[tmpDset.ImageType[2]]
             except:
                 print("Unsupported ImageType %s -- defaulting to IMTYPE_MAGNITUDE" % tmpDset.ImageType[2])
-                tmpMrdImg.image_type                = ismrmrd.IMTYPE_MAGNITUDE
+                tmpMrdImg.image_type = ismrmrd.IMTYPE_MAGNITUDE
 
-            tmpMrdImg.field_of_view            = (tmpDset.PixelSpacing[0]*tmpDset.Rows, tmpDset.PixelSpacing[1]*tmpDset.Columns, tmpDset.SliceThickness)
+            try:
+                # Get pixel spacing and slice thickness with proper handling for enhanced DICOM
+                pixel_spacing = get_pixel_spacing(tmpDset)
+                slice_thickness = get_slice_thickness(tmpDset)
+                
+                tmpMrdImg.field_of_view = (
+                    pixel_spacing[0] * tmpDset.Rows,
+                    pixel_spacing[1] * tmpDset.Columns,
+                    slice_thickness
+                )
+            except Exception as e:
+                print(f"Error setting field_of_view: {e} - using defaults")
+                tmpMrdImg.field_of_view = (
+                    tmpDset.Rows,  # Default to 1mm spacing
+                    tmpDset.Columns,
+                    1.0  # Default slice thickness
+                )
+                
             tmpMrdImg.position                 = tuple(np.stack(tmpDset.ImagePositionPatient))
             tmpMrdImg.read_dir                 = tuple(np.stack(tmpDset.ImageOrientationPatient[0:3]))
             tmpMrdImg.phase_dir                = tuple(np.stack(tmpDset.ImageOrientationPatient[3:7]))
@@ -182,9 +275,19 @@ def main(args):
 
             tmpMrdImg.image_series_index     = uSeriesNum.tolist().index(tmpDset.SeriesNumber)
             tmpMrdImg.image_index            = tmpDset.get('InstanceNumber', 0)
-            tmpMrdImg.slice                  = uSliceLoc.tolist().index(tmpDset.SliceLocation)
+            
+            # Use the same slice location extraction for consistency
+            loc = get_slice_location(tmpDset)
+            if loc is not None:
+                tmpMrdImg.slice = np.where(uSliceLoc == loc)[0][0]
+            else:
+                tmpMrdImg.slice = iImg % len(uSliceLoc)
+                
             try:
-                tmpMrdImg.phase                  = uTrigTime.tolist().index(tmpDset.TriggerTime)
+                if hasattr(tmpDset, 'TriggerTime'):
+                    tmpMrdImg.phase = uTrigTime.tolist().index(tmpDset.TriggerTime)
+                else:
+                    tmpMrdImg.phase = 0
             except:
                 pass
 
